@@ -33,7 +33,7 @@ torun_bikes = inbalance(size(torun_BSS_dist_mat)[1], 7)
 # rozwiązywanie
 tour_greedy = greedy_algo_SBRP(torun_BSS_dist_mat, torun_bikes)[2]
 tour_asif = solve_asif_TSP(torun_BSS_dist_mat, torun_bikes)
-tour_adjust = adjust_TSP2(torun_BSS_dist_mat, torun_bikes)
+tour_adjust = adjust_TSP(torun_BSS_dist_mat, torun_bikes)
 
 # ile tras wyznaczono
 tour_greedy |> get_graph_matrix |> sum
