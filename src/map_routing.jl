@@ -1,11 +1,11 @@
-using Random, XLSX, Parameters, OpenStreetMapX, LightGraphs, Colors, Plots, GraphRecipes, TravelingSalesmanExact, GLPK, OpenStreetMapXPlot
+using XLSX, Random, OpenStreetMapX, Colors, Plots, LightGraphs, GraphRecipes, TravelingSalesmanExact, GLPK, OpenStreetMapXPlot
 
-cd("C:\\Users\\HP\\Documents\\julia\\BikeSharingRebalancing.jl")
-include("SBSRP_functions.jl")
+include("src\\SBSRP_functions.jl")
+include("src\\misc_functions.jl")
 Random.seed!(0)
 
-stations = XLSX.readxlsx("bike_sharing_stations.xlsx")["Sheet1"][:]
-torun = get_map_data("torun.osm", use_cache = false, trim_to_connected_graph = true)
+stations = XLSX.readxlsx("geo\\bike_sharing_stations.xlsx")["Sheet1"][:]
+torun = get_map_data("geo\\torun.osm", use_cache = false, trim_to_connected_graph = true)
 
 n_stations = size(stations)[1]
 torun_BSS_dist_mat = zeros(n_stations, n_stations)
@@ -30,58 +30,47 @@ end
 torun_bikes = inbalance(size(torun_BSS_dist_mat)[1], 7)
 
 
-# rozwiązywanie
+# solving 
 tour_greedy = greedy_algo_SBRP(torun_BSS_dist_mat, torun_bikes)[2]
-tour_asif = solve_asif_TSP(torun_BSS_dist_mat, torun_bikes)
-tour_adjust = adjust_TSP(torun_BSS_dist_mat, torun_bikes)
+tour_asif = relax_greedy_SBSRP(torun_BSS_dist_mat, torun_bikes)
+tour_adjust = permute_relax_SBSRP(torun_BSS_dist_mat, torun_bikes)
 
-# ile tras wyznaczono
+# through how many stations proposed tour goes?
 tour_greedy |> get_graph_matrix |> sum
 tour_asif |> get_graph_matrix |> sum
 tour_adjust |> get_graph_matrix |> sum
 
-# czy wszystkie uzupelnily stacje?
+# are stations full?
 all(check_inventory(tour_adjust, torun_bikes)[1] .== 0)
 all(check_inventory(tour_adjust, torun_bikes)[1] .== 0)
 all(check_inventory(tour_adjust, torun_bikes)[1] .== 0)
 
-# ile wynosi funkcja celu (długość trasy)
-sum(get_graph_matrix(tour_greedy) .* torun_BSS_dist_mat)
+# Whats the value of objective function (length of tour)
+sum(get_graph_matrix(tour_greedy) .* torun_BSS_dist_mat[1:maximum(tour_greedy), 1:maximum(tour_greedy)]) # greedy algo omit stations with no demand so tour graph is smaller
 sum(get_graph_matrix(tour_asif) .* torun_BSS_dist_mat)
 sum(get_graph_matrix(tour_adjust) .* torun_BSS_dist_mat)
 
 plot(stations[:,1],stations[:,2], seriestype = :scatter, markersize = 3, color = :black, ticks = false,
-     axis = false, legend=:none, label = "miasta", series_annotation = text.(torun_bikes, :bottom))
-     plot!(stations[:,1][tour_adjust, 1], stations[:,2][tour_adjust, 1], linecolor = :red, label = "ścieżka")
+     axis = false, series_annotation = text.(torun_bikes, :bottom), label = "stacje")
 
 
+tour_animate = deepcopy(tour_adjust)
 
-Random.seed!(0);
-pointA = station_nodes[10]
-pointB = station_nodes[39]
-sr = shortest_route(torun, pointA, pointB)[1]
-Plots.gr()
-p = OpenStreetMapXPlot.plotmap(torun,width=1200,height=800);
-addroute!(p, torun, sr;route_color="red", fontsize = 10);
+BSRP_animation = @animate for station in 1:length(tour_animate)
 
-tour = Int64[]
-for station in 1:(length(station_nodes)-1)
-    global tour = vcat(tour, shortest_route(torun, station_nodes[station], station_nodes[station + 1])[1])
+    tour_loop = tour_animate[1:station]
+    station_d = check_inventory(tour_loop, torun_bikes)[1]
+
+    plot(stations[:,1],stations[:,2], seriestype = :scatter, markersize = 3,
+    color = :black, ticks = false, 
+    series_annotation = text.(station_d, :bottom), label = "Nodes/stations")
+    plot!(stations[tour_loop,1], stations[tour_loop, 2], label = "Vertices/tour")
+
 end
 
+gif(BSRP_animation, fps = 2,  "doc\\media\\adjusting_algo.gif")
 
-tour = [push!(tour, shortest_route(torun, station_nodes[a], station_nodes[a + 1])[1]) for a = 1:(length(station_nodes)-1)]
 
-p = OpenStreetMapXPlot.plotmap(torun,width=1200,height=800)
-addroute!(p, torun, tour;route_color="red", fontsize = 10)
 
-for point in 1:length(station_nodes) 
-    addroute!(p, torun, )
-end
 
-shortest_route(torun, station_nodes[1], station_nodes[11])[1][:]
 
-s = []
-push!(s, [2,3,4,2])
-sr
-Int64{tour}

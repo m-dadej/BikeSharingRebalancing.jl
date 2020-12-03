@@ -1,3 +1,4 @@
+using JuMP, GLPK
 # constraints
 
 # each vertice can only have two edges
@@ -21,8 +22,9 @@ end
 
 # checks if there is only one tour i.e. no subtours
 function single_tour(x)
-    N = size(x)[1]
+    N    = size(x)[1]
     tour = int[1]
+    
     while true
         city_loc = findmax(x[tour[end], 1:N])
         if city_loc == tour[1]
@@ -58,3 +60,21 @@ function greedy_algo(c)
     push!(tour, 1)
     tour
 end
+
+# euclidean distance (function with 2 methods)
+
+function euc_distance(p_1, p_2, q_1, q_2)
+    sqrt.((p_1 .- q_1).^2 .+ (p_2 .- q_2).^2)
+end
+
+# make distance_matrix. Another method for different arguments.
+function euc_distance(x_coord, y_coord)
+    dist_mat = zeros(length(x_coord),length(x_coord))
+    for x in 1:N 
+        for y in 1:N 
+            dist_mat[x,y] = sqrt.((x_coord[x] .- x_coord[y]).^2 .+ (y_coord[x] .- y_coord[y]).^2)
+        end
+    end
+    return dist_mat
+end
+

@@ -50,3 +50,5 @@ function inbalance(n_city, max_inventory)
     end
     return inventory
 end
+
+
