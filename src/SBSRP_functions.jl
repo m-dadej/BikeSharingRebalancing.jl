@@ -1,13 +1,15 @@
-using Plots, LightGraphs, GraphRecipes, TravelingSalesmanExact, GLPK
+using Plots, TravelingSalesmanExact, GLPK
+using LightGraphs, GraphRecipes
+
 
 function greedy_algo_SBRP(c, initial_inventory)
-
+    # initial objects
     tour       = [1]
     inventory  = deepcopy(initial_inventory)
     bikes_held = 0
 
     while !all(inventory .== 0)
-
+        # distance from a given point
         potential_cities = c[:, tour[end]]
 
         # decide where to go next based on current number of bikes
@@ -17,12 +19,14 @@ function greedy_algo_SBRP(c, initial_inventory)
             potential_cities[findall(inventory .<= 0)] .= Inf
         end
         
+        # next station is the nearest one
         next_station = findmin(potential_cities)[2]
 
         # decide how many bikes leave and how many take
         leave = min(0, (inventory[next_station] + bikes_held))
         take  = max(0, (inventory[next_station] + bikes_held))
 
+        # swap inventory
         inventory[next_station] = leave
         bikes_held = take
 
@@ -35,7 +39,7 @@ end
 # for a given tour and initial_inventory of equal length check what final inventory looks
 function check_inventory(tour, initial_inventory)
 
-    inv  = deepcopy(initial_inventory)
+    inv        = deepcopy(initial_inventory)
     bikes_held = 0
 
     for vertex in tour
@@ -44,13 +48,14 @@ function check_inventory(tour, initial_inventory)
         take  = max(0, (inv[vertex] + bikes_held))
 
         inv[vertex] = leave
-        bikes_held = take
+        bikes_held  = take
 
     end
 
     return [inv, bikes_held]
 end
 
+# this function is most likely not working
 function proba_algo(c, initial_inventory)
 
     # find solution as if its TSP
@@ -100,7 +105,8 @@ function proba_algo(c, initial_inventory)
 end
 
 
-function adjust_TSP(dist_mat, bikes)
+# main algorithm for solving static bike sharing rebalancing problem
+function permute_relax_SBSRP(dist_mat, bikes)
 
     # find solution as if its TSP
     set_default_optimizer!(GLPK.Optimizer)
@@ -143,7 +149,8 @@ function adjust_TSP(dist_mat, bikes)
     return solved_tour
 end
 
-function solve_asif_TSP(c, bikes)
+# this algorithm for solving SBSRP first solves TSP and then greedly relocate stations with demand
+function relax_greedy_SBSRP(c, bikes)
 
     # find solution as if its TSP
     set_default_optimizer!(GLPK.Optimizer)
